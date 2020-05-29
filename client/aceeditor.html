@@ -1,0 +1,94 @@
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>局域网剪贴板</title>
+<style type="text/css">
+#editor { 
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  font-size: 26px;
+}
+.paste {
+  height: 400px;
+  width: 100%;
+  display: inline-block;
+  font-size: 22px;
+  padding: 8px;
+  letter-spacing: 2px;
+}
+</style>
+<body>
+<div id="app">
+  <textarea class="paste" v-model="paste" @input="sync"></textarea>
+</div>
+  <div id="editor"></div>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script type="text/javascript" src="https://pagecdn.io/lib/ace/1.4.6/ace.js"></script>
+<script type="text/javascript">
+var editor = ace.edit("editor")
+editor.setTheme("ace/theme/monokai")
+editor.session.setTabSize(2)
+editor.session.setUseWrapMode(true)
+editor.session.setMode("ace/mode/javascript")
+
+document.addEventListener("keyup", ()=>wsSend(editor.getValue()))
+
+function sendv(){
+  wsSend(editor.getValue())
+}
+
+let debug = true
+
+function clog(info, error=false){
+  if (debug) {
+    info = typeof(info) == "object"?JSON.stringify(info):info
+    error?console.error(info):console.log(info)
+  } else {}
+}
+
+let app = new Vue({
+  el: "#app",
+  data: {
+    paste: ""
+  },
+  methods: {
+    sync(){
+      wsSend(this.paste)
+    }
+  }
+})
+
+let ws = new WebSocket("ws://" + location.hostname + ":8180")
+
+function wsSend(obj) {
+  // ws.send 转换
+  if (typeof(obj) == "object") {
+    ws.send(JSON.stringify(obj))
+  } else {
+    ws.send(obj)
+  }
+}
+
+ws.onopen = ()=>{
+  clog("ws open")
+}
+
+ws.onmessage = ms=>{
+  clog(ms)
+  let fa = ms.data.length>1000?"":ms.data
+  app.paste = fa
+  editor.session.setValue(fa)
+}
+
+ws.onclose = close=>{
+  clog("与服务器连接断开" + clog(close))
+}
+
+ws.onerror = error=>{
+  clog("连接错误" + clog(error))
+}
+
+</script>
+</body>
