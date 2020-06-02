@@ -37,14 +37,14 @@ app.post('/upload', (req, res) => {
   res.end('js uploaded success!')
 })
 
-let paste = ""
+const paste = {type: 'word'}
 const wss = new WebSocket.Server({ port: 8180 })
 
 function wsSerSend(data, option){
   wss.clients.forEach(client=>{
     // if (client !== sws && client.readyState === sws.OPEN) {
       try {
-        paste = JSON.parse(data).data
+        paste.data = JSON.parse(data).data
       } catch {}
       console.log('send data')
       client.send(data, option)
@@ -53,11 +53,11 @@ function wsSerSend(data, option){
 }
 
 wss.on('connection', (ws)=>{
-  ws.send(paste)
+  if(paste.data) ws.send(paste)
   gws = ws
   ws.on('message', (data)=>{
     // console.log('send message:', data)
-    paste = data
-    wsSerSend(JSON.stringify({ type: 'word', data }))
+    paste.data = data
+    wsSerSend(JSON.stringify(paste))
   })
 })
