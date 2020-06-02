@@ -9,11 +9,33 @@
   padding: 8px;
   letter-spacing: 2px;
 }
+
+form {
+  display: flex;
+  justify-content: space-around;
+}
+
+input {
+  width: 48%;
+  background: #2c11c3;
+  font-size: 24px;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  padding: 8px 20px;
+}
 </style>
 <body>
 <div id="app">
+  <form method="post" enctype="multipart/form-data" action="/upload" target="nm_iframe">
+    <input name="filename" type="file">
+    <input type="submit">
+  </form>
+  <a :href="url" target="_blank">{{ url }}</a>
   <textarea class="paste" v-model="paste" @input="sync"></textarea>
 </div>
+
+<iframe id="id_iframe" name="nm_iframe" style="display:none;"></iframe>
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script type="text/javascript">
@@ -30,7 +52,9 @@ function clog(info, error=false){
 let app = new Vue({
   el: "#app",
   data: {
-    paste: ""
+    paste: "",
+    url: '',
+    data: ''
   },
   methods: {
     sync(){
@@ -53,11 +77,21 @@ function wsSend(obj) {
 ws.onopen = ()=>{
   clog("ws open")
 }
-
+// /{type:"application/pdf"}
 ws.onmessage = ms=>{
   clog(ms)
-  // let fa = ms.data.length>1000?"":ms.data
-  app.paste = decodeURI(ms.data)
+  // app.paste = ms.data
+  try {
+    var data = JSON.parse(ms.data)
+    // let fa = ms.data.length>1000?"":ms.data
+    app.paste = decodeURI(data.data)
+  } catch {
+    app.data = new Blob([ms.data], {type: "text/plain"})
+    app.url = webkitURL.createObjectURL(app.data)
+    // app.paste = app.url
+    app.data.text().then(s=>app.paste = s)
+    window.open(app.url)
+  }
 }
 
 ws.onclose = close=>{
